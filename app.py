@@ -96,8 +96,48 @@ time_ranges = {
 selected_range = st.sidebar.radio("Time Range", list(time_ranges.keys()), index=1)
 
 # Timezone Selection
-common_timezones = ['UTC', 'Asia/Shanghai', 'Europe/Berlin', 'Europe/London', 'US/Eastern', 'US/Pacific']
-selected_timezone = st.sidebar.selectbox("Display Timezone", common_timezones, index=2) # Default to Berlin (UTC+1)
+def get_tz_options():
+    base_tzs = [
+        'UTC',
+        'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Tokyo', 'Asia/Singapore', 'Asia/Dubai',
+        'Europe/Berlin', 'Europe/London', 'Europe/Paris', 'Europe/Zurich', 'Europe/Moscow',
+        'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific',
+        'Australia/Sydney'
+    ]
+    options = {}
+    
+    # Interface for Local System Time (Server Time in Web App / Device Time in Native App)
+    options["🔌 Local System Time"] = "Local"
+    
+    now = datetime.now(pytz.utc)
+    for tz in base_tzs:
+        try:
+            timezone = pytz.timezone(tz)
+            offset = now.astimezone(timezone).utcoffset()
+            hours = int(offset.total_seconds() / 3600)
+            label = f"{tz} (UTC{hours:+d})"
+            options[label] = tz
+        except:
+            continue
+    return options
+
+tz_options = get_tz_options()
+# Try to set default to Berlin
+default_ix = 0
+tz_labels = list(tz_options.keys())
+for i, label in enumerate(tz_labels):
+    if "Berlin" in label:
+        default_ix = i
+        break
+
+selected_tz_label = st.sidebar.selectbox("Display Timezone", tz_labels, index=default_ix)
+selected_timezone_name = tz_options[selected_tz_label]
+
+# Resolve to actual timezone object
+if selected_timezone_name == "Local":
+    display_tz = datetime.now().astimezone().tzinfo
+else:
+    display_tz = pytz.timezone(selected_timezone_name)
 
 # Theme Selection
 theme_map = {'Dark': 'plotly_dark', 'Light': 'plotly_white'}
@@ -184,17 +224,17 @@ if not hist_data.empty:
     # Handle Timezones: Convert to User Selected Timezone
     if hist_data.index.tz is not None:
         # Convert to selected timezone
-        hist_data.index = hist_data.index.tz_convert(selected_timezone)
+        hist_data.index = hist_data.index.tz_convert(display_tz)
     else:
         # If naive, assume UTC then convert
-        hist_data.index = hist_data.index.tz_localize('UTC').tz_convert(selected_timezone)
+        hist_data.index = hist_data.index.tz_localize('UTC').tz_convert(display_tz)
     
     # Remove timezone info for clean plotting (Plotly handles naive datetimes as "wall time")
     hist_data.index = hist_data.index.tz_localize(None)
     
     # Calculate cutoff time in the selected timezone
     # We use datetime.now(tz) to get current time in target timezone, then strip tz for comparison
-    now_in_tz = datetime.now(pytz.timezone(selected_timezone)).replace(tzinfo=None)
+    now_in_tz = datetime.now(display_tz).replace(tzinfo=None)
     cutoff_time = now_in_tz - timedelta(hours=range_cfg['hours'])
     
     # Smart Extension for Weekend/Holidays (Only for short ranges <= 7 days)
@@ -318,13 +358,12 @@ while True:
     live_rates = st.session_state.live_data['rates']
     
     # Convert live times to selected timezone
-    target_tz = pytz.timezone(selected_timezone)
     live_times_local = []
     for t in live_times_utc:
         if t.tzinfo is None:
             # Handle legacy naive data (assume UTC if server is UTC)
             t = pytz.utc.localize(t)
-        live_times_local.append(t.astimezone(target_tz).replace(tzinfo=None))
+        live_times_local.append(t.astimezone(display_tz).replace(tzinfo=None))
     
     if live_times_local:
         # Prepend the last history point to live data to create a seamless connection
