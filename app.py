@@ -299,24 +299,23 @@ if True:
             fillcolor=fill_col
         ))
         
-        # Connect History to Live
-        if st.session_state.live_data['times']:
-            fig.add_trace(go.Scatter(
-                x=[hist_data.index[-1], st.session_state.live_data['times'][0]],
-                y=[hist_data['Close'].iloc[-1], st.session_state.live_data['rates'][0]],
-                mode='lines',
-                showlegend=False,
-                line=dict(color=line_col, width=2, dash='solid'),
-                opacity=0.5,
-                fill='tozeroy',
-                fillcolor=fill_col
-            ))
-
-    # Live Line
-    if st.session_state.live_data['times']:
+    # Live Line (Merged with connector to avoid extra hover labels)
+    live_times = st.session_state.live_data['times']
+    live_rates = st.session_state.live_data['rates']
+    
+    if live_times:
+        # Prepend the last history point to live data to create a seamless connection
+        # This removes the need for a separate "connector" trace which causes duplicate hover labels
+        if not hist_data.empty:
+            plot_times = [hist_data.index[-1]] + live_times
+            plot_rates = [hist_data['Close'].iloc[-1]] + live_rates
+        else:
+            plot_times = live_times
+            plot_rates = live_rates
+            
         fig.add_trace(go.Scatter(
-            x=st.session_state.live_data['times'], 
-            y=st.session_state.live_data['rates'],
+            x=plot_times, 
+            y=plot_rates,
             mode='lines',
             name='Live',
             line=dict(color=line_col, width=2),
