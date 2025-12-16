@@ -183,7 +183,26 @@ if not hist_data.empty:
         hist_data.index = hist_data.index.tz_convert(local_tz).tz_localize(None)
     
     cutoff_time = datetime.now() - timedelta(hours=range_cfg['hours'])
-    hist_data = hist_data[hist_data.index >= cutoff_time]
+    
+    # Smart Extension for Weekend/Holidays (Only for short ranges <= 7 days)
+    if not hist_data.empty and range_cfg['hours'] <= 168:
+        data_in_window = hist_data[hist_data.index >= cutoff_time]
+        effective_start = cutoff_time
+        
+        if data_in_window.empty:
+            # Scenario 1: Entire window is in a gap (e.g. Sunday) -> Show last 6h of previous data
+            effective_start = hist_data.index[-1] - timedelta(hours=6)
+        else:
+            # Scenario 2: Window starts in a gap (e.g. Monday morning) -> Include tail of previous session
+            first_in_window = data_in_window.index[0]
+            if (first_in_window - cutoff_time) > timedelta(hours=4):
+                data_before = hist_data[hist_data.index < first_in_window]
+                if not data_before.empty:
+                    effective_start = data_before.index[-1] - timedelta(hours=6)
+        
+        hist_data = hist_data[hist_data.index >= effective_start]
+    else:
+        hist_data = hist_data[hist_data.index >= cutoff_time]
 
 # Placeholders
 title_placeholder = st.empty()
