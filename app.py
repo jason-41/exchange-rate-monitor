@@ -304,11 +304,10 @@ while True:
         y_range = [min_val * 0.999, max_val * 1.001]
 
     fig.update_layout(
-        title=f"Exchange Rate Trend ({selected_range})",
-        xaxis_title="Time",
-        yaxis_title="CNY",
-        yaxis=dict(range=y_range, tickformat=".4f", gridcolor=chart_grid),
-        xaxis=dict(gridcolor=chart_grid),
+        title=dict(text=f"Exchange Rate Trend ({selected_range})", font=dict(color=chart_font_color)),
+        xaxis=dict(title="Time", title_font=dict(color=chart_font_color), tickfont=dict(color=chart_font_color), gridcolor=chart_grid),
+        yaxis=dict(title="CNY", title_font=dict(color=chart_font_color), tickfont=dict(color=chart_font_color), range=y_range, tickformat=".4f", gridcolor=chart_grid),
+        legend=dict(font=dict(color=chart_font_color)),
         height=500,
         template=theme_map[selected_theme],
         paper_bgcolor=chart_bg,
