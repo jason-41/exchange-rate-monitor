@@ -184,7 +184,8 @@ while True:
     
     with metrics_placeholder.container():
         c1, c2, c3 = st.columns(3)
-        c1.metric("实时汇率 (Yahoo)", f"{current_val:.4f}", f"{delta_percent:.2f}%")
+        # delta_color="inverse" makes positive delta Red (Up) and negative delta Green (Down)
+        c1.metric("实时汇率 (Yahoo)", f"{current_val:.4f}", f"{delta_percent:.2f}%", delta_color="inverse")
         c2.metric("中国银行 (现汇/现钞)", f"{boc['spot_sell']} / {boc['cash_sell']}" if boc else "Loading...")
         c3.metric("招商银行 (现汇/现钞)", f"{cmb['spot_sell']} / {cmb['cash_sell']}" if cmb else "Loading...")
 
@@ -198,7 +199,7 @@ while True:
             y=hist_data['Close'],
             mode='lines',
             name='History',
-            line=dict(color='#ff3333' if delta <= 0 else '#00ff00', width=2, dash='solid'),
+            line=dict(color='#ff3333' if delta >= 0 else '#00ff00', width=2, dash='solid'),
             opacity=0.5
         ))
         
