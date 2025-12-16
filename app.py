@@ -98,6 +98,36 @@ selected_range = st.sidebar.radio("Time Range", list(time_ranges.keys()), index=
 theme_map = {'Dark': 'plotly_dark', 'Light': 'plotly_white'}
 selected_theme = st.sidebar.radio("Theme", list(theme_map.keys()), index=0)
 
+# Apply Theme Colors (CSS & Chart)
+if selected_theme == 'Dark':
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background-color: #000000;
+            color: #e0e0e0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    chart_bg = '#000000'
+    chart_grid = '#404040'
+else:
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background-color: #f0f0f0;
+            color: #000000;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    chart_bg = '#f0f0f0'
+    chart_grid = '#d0d0d0'
+
 # Initialize Session State
 if 'live_data' not in st.session_state:
     st.session_state.live_data = {'times': [], 'rates': []}
@@ -202,7 +232,7 @@ while True:
     if selected_theme == 'Dark':
         c_up, c_down = '#ff3333', '#00ff00'
         f_up, f_down = 'rgba(255, 50, 50, 0.2)', 'rgba(0, 255, 0, 0.2)'
-    else:
+    elif selected_theme == 'Light':
         c_up, c_down = '#d62728', '#2ca02c' # Plotly standard red/green
         f_up, f_down = 'rgba(214, 39, 40, 0.2)', 'rgba(44, 160, 44, 0.2)'
         
@@ -264,9 +294,12 @@ while True:
         title=f"Exchange Rate Trend ({selected_range})",
         xaxis_title="Time",
         yaxis_title="CNY",
-        yaxis=dict(range=y_range, tickformat=".4f"),
+        yaxis=dict(range=y_range, tickformat=".4f", gridcolor=chart_grid),
+        xaxis=dict(gridcolor=chart_grid),
         height=500,
         template=theme_map[selected_theme],
+        paper_bgcolor=chart_bg,
+        plot_bgcolor=chart_bg,
         margin=dict(l=0, r=0, t=30, b=0)
     )
     chart_placeholder.plotly_chart(fig, use_container_width=True)
