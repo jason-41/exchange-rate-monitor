@@ -92,7 +92,7 @@ time_ranges = {
     '6m':  {'period': '6mo', 'interval': '1d', 'hours': 4320},
     '1y':  {'period': '1y',  'interval': '1d', 'hours': 8760}
 }
-selected_range = st.sidebar.radio("Time Range", list(time_ranges.keys()), index=2)
+selected_range = st.sidebar.radio("Time Range", list(time_ranges.keys()), index=1)
 
 # Theme Selection
 theme_map = {'Dark': 'plotly_dark', 'Light': 'plotly_white'}
