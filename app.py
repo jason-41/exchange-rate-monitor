@@ -212,8 +212,8 @@ footer_placeholder = st.empty()
 
 fetcher = BankRateFetcher()
 
-# Live Loop (Refactored to use st.rerun for state preservation)
-if True:
+# Live Loop
+while True:
     current_time = time.time()
     
     # 1. Fetch Live Rate (Yahoo)
@@ -361,9 +361,8 @@ if True:
         margin=dict(l=0, r=0, t=30, b=0),
         uirevision=f"{selected_currency}_{selected_range}"
     )
-    chart_placeholder.plotly_chart(fig, width='stretch', key="main_chart")
+    chart_placeholder.plotly_chart(fig, width='stretch', key=f"chart_{current_time}")
     
     footer_placeholder.caption("Source: Yahoo Finance API & Bank Official Websites/API. © 2025 Jason Cao. Personal Use Only.")
 
     time.sleep(10)
-    st.rerun()
