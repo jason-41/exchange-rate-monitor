@@ -183,14 +183,13 @@ if not hist_data.empty:
         # 2. Remove timezone info to make it naive UTC
         hist_data.index = hist_data.index.tz_localize(None)
         
-        # 3. Calculate system's local timezone offset (Local Time - UTC Time)
-        # This works reliably on Windows/Linux to get the user's wall clock offset
-        local_now = datetime.now()
-        utc_now = datetime.utcnow()
-        offset = local_now - utc_now
+        # 3. Calculate system's local timezone offset
+        # datetime.now().astimezone() returns an aware datetime with system local timezone
+        offset = datetime.now().astimezone().utcoffset()
         
         # 4. Apply offset to shift data to local time
-        hist_data.index = hist_data.index + offset
+        if offset:
+            hist_data.index = hist_data.index + offset
     
     cutoff_time = datetime.now() - timedelta(hours=range_cfg['hours'])
     
