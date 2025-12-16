@@ -366,5 +366,5 @@ if True:
     
     footer_placeholder.caption("Source: Yahoo Finance API & Bank Official Websites/API. © 2025 Jason Cao. Personal Use Only.")
 
-    time.sleep(3)
+    time.sleep(10)
     st.rerun()
