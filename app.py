@@ -198,7 +198,7 @@ while True:
             y=hist_data['Close'],
             mode='lines',
             name='History',
-            line=dict(color='#ff3333' if delta >= 0 else '#00ff00', width=2, dash='solid'),
+            line=dict(color='#ff3333' if delta <= 0 else '#00ff00', width=2, dash='solid'),
             opacity=0.5
         ))
         
@@ -249,6 +249,6 @@ while True:
     )
     chart_placeholder.plotly_chart(fig, use_container_width=True)
     
-    footer_placeholder.caption("Source: Yahoo Finance API & Bank Official Websites. © 2025 Jason Cao.")
+    footer_placeholder.caption("Source: Yahoo Finance API & Bank Official Websites. © 2025 Jason Cao. Personal Use Only.")
 
     time.sleep(3)
