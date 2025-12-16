@@ -171,7 +171,7 @@ while True:
     # 3. Update UI
     
     # Title
-    title_placeholder.title(f"{currency_info['name']} ({selected_currency}) to CNY")
+    title_placeholder.title(f" {selected_currency} ({currency_info['name']}) to CNY")
 
     # Metrics
     current_val = price if price else (hist_data['Close'].iloc[-1] if not hist_data.empty else 0)
@@ -200,7 +200,9 @@ while True:
             mode='lines',
             name='History',
             line=dict(color='#ff3333' if delta >= 0 else '#00ff00', width=2, dash='solid'),
-            opacity=0.5
+            opacity=0.5,
+            fill='tozeroy',
+            fillcolor='rgba(255, 50, 50, 0.1)' if delta >= 0 else 'rgba(0, 255, 0, 0.1)'
         ))
         
         # Connect History to Live
@@ -211,7 +213,9 @@ while True:
                 mode='lines',
                 showlegend=False,
                 line=dict(color='#ff3333' if delta >= 0 else '#00ff00', width=2, dash='solid'),
-                opacity=0.5
+                opacity=0.5,
+                fill='tozeroy',
+                fillcolor='rgba(255, 50, 50, 0.1)' if delta >= 0 else 'rgba(0, 255, 0, 0.1)'
             ))
 
     # Live Line
