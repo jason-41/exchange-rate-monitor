@@ -298,8 +298,8 @@ while True:
             st.session_state.bank_rates['BOC'] = rate
         st.session_state.last_bank_update['BOC'] = current_time
     
-    # CMB (10s)
-    if current_time - st.session_state.last_bank_update['CMB'] > 10:
+    # CMB (20s)
+    if current_time - st.session_state.last_bank_update['CMB'] > 20:
         rate = fetcher.get_cmb_rates(selected_currency)
         if rate:
             st.session_state.bank_rates['CMB'] = rate
@@ -427,4 +427,4 @@ while True:
     
     footer_placeholder.caption("Source: Yahoo Finance API & Bank Official Websites/API. © 2025 Jason Cao. Personal Use Only.")
 
-    time.sleep(10)
+    time.sleep(20)
