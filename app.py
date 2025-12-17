@@ -347,46 +347,35 @@ while True:
     line_col = c_up if delta >= 0 else c_down
     fill_col = f_up if delta >= 0 else f_down
     
-    # History Line
+    # Combine History and Live Data into a Single Trace
+    # This prevents duplicate hover labels and "jumping" points at the junction
+    plot_times = []
+    plot_rates = []
+    
     if not hist_data.empty:
-        fig.add_trace(go.Scatter(
-            x=hist_data.index, 
-            y=hist_data['Close'],
-            mode='lines',
-            name='History',
-            line=dict(color=line_col, width=2, dash='solid'),
-            opacity=0.5,
-            fill='tozeroy',
-            fillcolor=fill_col
-        ))
+        plot_times.extend(hist_data.index)
+        plot_rates.extend(hist_data['Close'].tolist())
         
-    # Live Line (Merged with connector to avoid extra hover labels)
+    # Live Data (already converted to local time)
     live_times_utc = st.session_state.live_data['times']
     live_rates = st.session_state.live_data['rates']
     
-    # Convert live times to selected timezone
     live_times_local = []
     for t in live_times_utc:
         if t.tzinfo is None:
-            # Handle legacy naive data (assume UTC if server is UTC)
             t = pytz.utc.localize(t)
         live_times_local.append(t.astimezone(display_tz).replace(tzinfo=None))
-    
+        
     if live_times_local:
-        # Prepend the last history point to live data to create a seamless connection
-        # This removes the need for a separate "connector" trace which causes duplicate hover labels
-        if not hist_data.empty:
-            plot_times = [hist_data.index[-1]] + live_times_local
-            plot_rates = [hist_data['Close'].iloc[-1]] + live_rates
-        else:
-            plot_times = live_times_local
-            plot_rates = live_rates
-            
+        plot_times.extend(live_times_local)
+        plot_rates.extend(live_rates)
+        
+    if plot_times:
         fig.add_trace(go.Scatter(
             x=plot_times, 
             y=plot_rates,
             mode='lines',
-            name='Live',
+            name='Rate',
             line=dict(color=line_col, width=2),
             fill='tozeroy',
             fillcolor=fill_col
