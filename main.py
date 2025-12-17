@@ -7,12 +7,12 @@ import pandas as pd
 import seaborn as sns
 from datetime import datetime, timedelta
 import warnings
-import mplcursors
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
 import threading
 import time
+import bisect
 
 # Suppress pandas warnings
 warnings.filterwarnings('ignore')
@@ -177,9 +177,9 @@ class ExchangeRateMonitor:
         self.refresh_data()
         self.start_bank_monitoring()
         
-        # Setup Hover Cursor
-        self.cursor = mplcursors.cursor([self.history_line, self.live_line], hover=True)
-        self.cursor.connect("add", self.on_hover)
+        # Setup Event Handlers
+        self.fig.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
+        self.fig.canvas.mpl_connect('axes_leave_event', self.on_mouse_leave)
 
     def setup_widgets(self):
         """Initialize control widgets."""
@@ -252,9 +252,17 @@ class ExchangeRateMonitor:
                 
         # Update existing lines if they exist
         if hasattr(self, 'history_line'):
-            # Only reset history line color if it's not currently colored by trend (which we handle in update_visuals)
-            # But update_visuals is called frequently, so we can just let it handle it.
             pass
+
+        # Update Tooltip Theme
+        if hasattr(self, 'tooltip'):
+            self.tooltip.get_bbox_patch().set_facecolor(theme['hover_bg'])
+            self.tooltip.get_bbox_patch().set_edgecolor(theme['hover_fg'])
+            self.tooltip.set_color(theme['hover_fg'])
+            
+        # Update V-Line Theme
+        if hasattr(self, 'v_line'):
+            self.v_line.set_color(theme['fg'])
 
         self.fig.canvas.draw_idle()
 
@@ -265,10 +273,18 @@ class ExchangeRateMonitor:
         self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d %H:%M'))
         
         # Initialize Lines
-        self.history_line, = self.ax.plot([], [], '-', color=theme['history_line'], alpha=0.5, 
-                                          label='History', linewidth=1.5, zorder=5)
         self.live_line, = self.ax.plot([], [], '-', color=theme['live_line_base'], 
-                                       label='Live', linewidth=1.5, zorder=10)
+                                       label='Rate', linewidth=1.5)
+        
+        # Vertical line for cursor (Crosshair)
+        self.v_line = self.ax.axvline(x=0, color=theme['fg'], linestyle='--', alpha=0.5, visible=False)
+        
+        # Tooltip annotation
+        self.tooltip = self.ax.annotate(
+            '', xy=(0, 0), xytext=(10, 10), textcoords='offset points',
+            bbox=dict(boxstyle="round,pad=0.5", fc=theme['hover_bg'], ec=theme['hover_fg'], alpha=0.9),
+            color=theme['hover_fg'], visible=False
+        )
         
         self.legend = None
             
@@ -404,11 +420,9 @@ class ExchangeRateMonitor:
                 cutoff_time = datetime.now() - timedelta(hours=cfg['hours'])
                 self.history_data = hist[hist.index >= cutoff_time]
                 
-                # Update Line
-                self.history_line.set_data(self.history_data.index, self.history_data['Close'])
+                # Update Line (Handled in update loop now)
             else:
                 self.history_data = pd.DataFrame()
-                self.history_line.set_data([], [])
                 
         except Exception as e:
             print(f"Error fetching history: {e}")
@@ -435,15 +449,83 @@ class ExchangeRateMonitor:
             print(f"Error fetching live rate: {e}")
             return None
 
-    def on_hover(self, sel):
-        """Tooltip callback."""
-        theme = self.themes[self.current_theme]
-        x, y = sel.target
-        # Convert float date to datetime
-        date = mdates.num2date(x).strftime('%Y-%m-%d %H:%M:%S')
-        sel.annotation.set_text(f"Time: {date}\nRate: {y:.4f}")
-        sel.annotation.get_bbox_patch().set(fc=theme['hover_bg'], alpha=0.9, edgecolor=theme['hover_fg'])
-        sel.annotation.set_color(theme['hover_fg'])
+    def on_mouse_leave(self, event):
+        """Hide cursor elements when mouse leaves axes."""
+        self.v_line.set_visible(False)
+        self.tooltip.set_visible(False)
+        self.fig.canvas.draw_idle()
+
+    def on_mouse_move(self, event):
+        """Handle mouse movement to update vertical line and tooltip."""
+        if not event.inaxes == self.ax:
+            return
+            
+        # Get data from the line
+        x_data = self.live_line.get_xdata()
+        y_data = self.live_line.get_ydata()
+        
+        if len(x_data) == 0:
+            return
+
+        # Convert event x to datetime (naive) for comparison if needed
+        try:
+            mouse_date = mdates.num2date(event.xdata).replace(tzinfo=None)
+        except:
+            return
+
+        # Find nearest index
+        # x_data usually contains floats (matplotlib dates) if plotted via plot_date or similar,
+        # but since we used set_data with datetimes, let's check.
+        # Matplotlib converts to float internally. get_xdata() usually returns what is stored.
+        # If set_data was used with datetimes, x_data is likely datetimes.
+        
+        target = mouse_date
+        if len(x_data) > 0 and isinstance(x_data[0], (float, np.floating)):
+             target = event.xdata
+
+        # Use bisect for fast search
+        if isinstance(x_data, np.ndarray):
+            idx = np.searchsorted(x_data, target)
+        else:
+            idx = bisect.bisect_left(x_data, target)
+            
+        # Check neighbors to find closest
+        if idx >= len(x_data):
+            idx = len(x_data) - 1
+        elif idx > 0:
+            curr_val = x_data[idx]
+            prev_val = x_data[idx-1]
+            
+            if isinstance(target, (float, np.floating)):
+                d1 = abs(curr_val - target)
+                d2 = abs(prev_val - target)
+            else:
+                d1 = abs((curr_val - target).total_seconds())
+                d2 = abs((prev_val - target).total_seconds())
+                
+            if d2 < d1:
+                idx = idx - 1
+                
+        nearest_x = x_data[idx]
+        nearest_y = y_data[idx]
+        
+        # Update Vertical Line
+        if isinstance(nearest_x, (float, np.floating)):
+            vline_x = nearest_x
+            date_str = mdates.num2date(nearest_x).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            vline_x = mdates.date2num(nearest_x)
+            date_str = nearest_x.strftime('%Y-%m-%d %H:%M:%S')
+            
+        self.v_line.set_xdata([vline_x, vline_x])
+        self.v_line.set_visible(True)
+        
+        # Update Tooltip
+        self.tooltip.xy = (vline_x, nearest_y)
+        self.tooltip.set_text(f"Time: {date_str}\nRate: {nearest_y:.4f}")
+        self.tooltip.set_visible(True)
+        
+        self.fig.canvas.draw_idle()
 
     def update_visuals(self, change, pct_change):
         """Updates colors and fills."""
@@ -455,8 +537,6 @@ class ExchangeRateMonitor:
             symbol = '▼'
             
         self.live_line.set_color(color)
-        self.history_line.set_color(color)
-        self.history_line.set_alpha(0.5)
         
         # Fill
         if self.fill_collection:
@@ -493,15 +573,18 @@ class ExchangeRateMonitor:
                 self.live_times.pop(0)
                 self.live_rates.pop(0)
             
-            # Prepare live line data (connect to history end)
-            plot_times = list(self.live_times)
-            plot_rates = list(self.live_rates)
+            # Combine History and Live Data
+            all_times = []
+            all_rates = []
             
             if not self.history_data.empty:
-                plot_times.insert(0, self.history_data.index[-1])
-                plot_rates.insert(0, self.history_data['Close'].iloc[-1])
+                all_times.extend(self.history_data.index)
+                all_rates.extend(self.history_data['Close'].values)
             
-            self.live_line.set_data(plot_times, plot_rates)
+            all_times.extend(self.live_times)
+            all_rates.extend(self.live_rates)
+            
+            self.live_line.set_data(all_times, all_rates)
             
             # Calculate change based on visible history
             change = 0
@@ -523,7 +606,7 @@ class ExchangeRateMonitor:
             self.ax.relim()
             self.ax.autoscale_view()
 
-        return self.live_line, self.history_line
+        return self.live_line,
 
     def start(self):
         print("Starting monitor...")
