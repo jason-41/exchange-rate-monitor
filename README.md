@@ -1,7 +1,7 @@
 # Exchange rate monitor
 #### by Jason Cao
 ### Overall:
-A toy project, personal-use exchange monitor mainly for CNY to[EUR, USD, HKD, GBP, JPY] and exchange rates of 2 banks (BOC, CMB) in China.
+A toy project, personal-use exchange rate monitor mainly for CNY to[EUR, USD, HKD, GBP, JPY] and exchange rates of 2 banks (BOC, CMB) in China.
 
 这是一个实时监控外汇汇率（如 EUR/CNY, USD/CNY）的工具，支持桌面端和网页端。
 数据来源：Yahoo Finance API (实时/历史) + 银行官网 (中国银行/招商银行)。
