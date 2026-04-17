@@ -4,7 +4,7 @@
 ## English
 
 ### Overview
-A toy project and personal-use exchange-rate monitor, mainly for CNY against EUR, USD, HKD, GBP, and JPY, plus exchange rates from two Chinese banks (BOC, CMB).
+A toy project and personal-use exchange rate monitor, mainly for CNY against EUR, USD, HKD, GBP, and JPY, plus exchange rates from two Chinese banks (BOC, CMB).
 
 This is a real-time foreign exchange monitoring tool (such as EUR/CNY and USD/CNY), supporting both desktop and web interfaces.  
 Data sources: Yahoo Finance API (real-time/historical) + bank official websites (Bank of China / China Merchants Bank).
